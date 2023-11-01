@@ -24,8 +24,8 @@ void find(char* fileName, char* path)
 {
     int fd;
     char buf[512],*p;
-    struct stat st;
-    struct dirent de;
+    struct stat st;//文件状态，包含问津类型
+    struct dirent de;//不管是文件还是文件夹，都可以用dirent表示
 
 
     fd = open(path, 0);
@@ -36,8 +36,8 @@ void find(char* fileName, char* path)
     }
     strcpy(buf,path);
     p = buf+strlen(buf);
-    *p++ = '/';
-    while (read(fd, &de, sizeof(de)) == sizeof(de))
+    *p++ = '/';//给当前路径加“/”
+    while (read(fd, &de, sizeof(de)) == sizeof(de))//循环阅读文件及下每个文件
     {
         if (de.inum == 0)
         {
@@ -65,7 +65,7 @@ void find(char* fileName, char* path)
                 }
             }
         }
-        else if (st.type == T_DIR && strcmp(p,".") != 0 && strcmp(p,"..") != 0)
+        else if (st.type == T_DIR && strcmp(p,".") != 0 && strcmp(p,"..") != 0)// . ..也算两个文件，要排除
         {   
             find(fileName, buf);
         }
