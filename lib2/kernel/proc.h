@@ -86,7 +86,9 @@ enum procstate { UNUSED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 struct proc {
   struct spinlock lock;
   // 向syscall传递参数
-  int istrace = 0;
+  int istrace;
+  int arg;
+
   // p->lock must be held when using these:
   enum procstate state;        // Process state
   struct proc *parent;         // Parent process

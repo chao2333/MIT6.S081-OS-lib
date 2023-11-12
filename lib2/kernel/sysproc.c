@@ -105,10 +105,9 @@ sys_trace(void)
   {
     return -1;
   }
-    
-  
-  printf("syscall:trace n is%d\n", n);
-  printf("myproc id%d\n", myproc()->pid);
+  myproc()->arg = n;
+  myproc()->istrace = 256;
+
 
   return 0;
 }

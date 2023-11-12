@@ -130,13 +130,17 @@ static uint64 (*syscalls[])(void) = {
 [SYS_close]   sys_close,
 [SYS_trace]   sys_trace,
 };
+//系统调用名字数组，用来打印
+static char* syscall_nam[]={
+  "fork","exit","wait","pipe","read","kill","exec","fstat","chdir","dup","getpid","sbrk","sleep","uptime","open","write","mknod","unlink","link","mkdir","close","trace"
+};
 
 void
 syscall(void)
 {
   int num;
   struct proc *p = myproc();
-  
+
   num = p->trapframe->a7;
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     p->trapframe->a0 = syscalls[num]();
@@ -144,5 +148,21 @@ syscall(void)
     printf("%d %s: unknown sys call %d\n",
             p->pid, p->name, num);
     p->trapframe->a0 = -1;
+  }
+
+    //打印
+  if (p->istrace == 256)
+  {
+    //printf("a0 is %d\n",p->trapframe->a0);
+    int arg = (p->arg)>>1;
+    for (int i = 1; i < 32; i++)
+    {
+      if ((arg & 1) && i == num)
+      {
+        //printf("i is %d\n",i);
+        printf("%d: syscall %s -> %d\n", p->pid, syscall_nam[i-1], p->trapframe->a0);
+      }
+     arg = arg >> 1;
+    }
   }
 }

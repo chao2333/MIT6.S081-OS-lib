@@ -150,6 +150,7 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+  p->istrace = 0;
 }
 
 // Create a user page table for a given process,
@@ -266,6 +267,8 @@ fork(void)
   if((np = allocproc()) == 0){
     return -1;
   }
+  //赋值mask给子进程
+  np->istrace = p->istrace;
 
   // Copy user memory from parent to child.
   if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
