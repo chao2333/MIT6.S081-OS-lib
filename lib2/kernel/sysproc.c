@@ -6,7 +6,10 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "sysinfo.h"
 
+int gnproc();
+int nfmem();
 uint64
 sys_exit(void)
 {
@@ -107,7 +110,29 @@ sys_trace(void)
   }
   myproc()->arg = n;
   myproc()->istrace = 256;
-
-
   return 0;
+}
+
+uint64 sys_sysinfo(void){
+ // printf("in sysinfi:hi\n");
+  struct sysinfo info;  
+  struct proc* p=myproc();
+  uint64 addr;
+
+
+  info.freemem = nfmem()*PGSIZE;
+  info.nproc = gnproc();
+
+  if (argaddr(0, &addr) < 0)
+  {
+    return -1;
+  }
+
+  if (copyout(p->pagetable, addr, (char *)&info,sizeof(info))<0)
+  {
+    return -1;
+  }
+  
+  //printf("freemem is %d,nproc is %d\n", info.freemem, info.nproc);
+  return 0; 
 }
