@@ -15,6 +15,28 @@ extern char etext[];  // kernel.ld sets this to end of kernel code.
 
 extern char trampoline[]; // trampoline.S
 
+//实验一 print a pagetable
+void vmprint(pagetable_t pagetable, int level){
+  for (uint64 i = 0; i < 512; i++)
+  {
+      if(*(pagetable+i) && (level<3)){
+
+        for (int i = 0; i < level; i++)
+        {
+          printf("..");
+          if (i != 2)
+          {
+            printf(" ");
+          }
+        }
+        printf("%d: ", i);
+        
+        uint64 pa = PTE2PA((uint64)(*(pagetable+i)));
+        printf("pte %p pa %p\n", *(pagetable+i), pa);
+        vmprint((pagetable_t)pa ,level+1);
+    }
+  }
+}
 /*
  * create a direct-map page table for the kernel.
  */
@@ -25,26 +47,59 @@ kvminit()
   memset(kernel_pagetable, 0, PGSIZE);
 
   // uart registers
-  kvmmap(UART0, UART0, PGSIZE, PTE_R | PTE_W);
+  kvmmap(kernel_pagetable, UART0, UART0, PGSIZE, PTE_R | PTE_W);
 
   // virtio mmio disk interface
-  kvmmap(VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
+  kvmmap(kernel_pagetable, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
 
   // CLINT
-  kvmmap(CLINT, CLINT, 0x10000, PTE_R | PTE_W);
+  kvmmap(kernel_pagetable, CLINT, CLINT, 0x10000, PTE_R | PTE_W);
 
   // PLIC
-  kvmmap(PLIC, PLIC, 0x400000, PTE_R | PTE_W);
+  kvmmap(kernel_pagetable, PLIC, PLIC, 0x400000, PTE_R | PTE_W);
 
   // map kernel text executable and read-only.
-  kvmmap(KERNBASE, KERNBASE, (uint64)etext-KERNBASE, PTE_R | PTE_X);
+  kvmmap(kernel_pagetable, KERNBASE, KERNBASE, (uint64)etext-KERNBASE, PTE_R | PTE_X);
 
   // map kernel data and the physical RAM we'll make use of.
-  kvmmap((uint64)etext, (uint64)etext, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
+  kvmmap(kernel_pagetable, (uint64)etext, (uint64)etext, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
 
   // map the trampoline for trap entry/exit to
   // the highest virtual address in the kernel.
-  kvmmap(TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
+  kvmmap(kernel_pagetable, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
+}
+
+/*
+ * 创造进程的内核页表
+ */
+pagetable_t
+kernelpgtblinit()
+{
+  pagetable_t kernelpgtb = (pagetable_t) kalloc();
+  memset(kernelpgtb, 0, PGSIZE);
+
+  // uart registers
+  kvmmap(kernelpgtb, UART0, UART0, PGSIZE, PTE_R | PTE_W);
+
+  // virtio mmio disk interface
+  kvmmap(kernelpgtb, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
+
+  // CLINT
+  kvmmap(kernelpgtb, CLINT, CLINT, 0x10000, PTE_R | PTE_W);
+
+  // PLIC
+  kvmmap(kernelpgtb, PLIC, PLIC, 0x400000, PTE_R | PTE_W);
+
+  // map kernel text executable and read-only.
+  kvmmap(kernelpgtb, KERNBASE, KERNBASE, (uint64)etext-KERNBASE, PTE_R | PTE_X);
+
+  // map kernel data and the physical RAM we'll make use of.
+  kvmmap(kernelpgtb, (uint64)etext, (uint64)etext, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
+
+  // map the trampoline for trap entry/exit to
+  // the highest virtual address in the kernel.
+  kvmmap(kernelpgtb, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
+  return kernelpgtb;
 }
 
 // Switch h/w page table register to the kernel's page table,
@@ -115,24 +170,24 @@ walkaddr(pagetable_t pagetable, uint64 va)
 // only used when booting.
 // does not flush TLB or enable paging.
 void
-kvmmap(uint64 va, uint64 pa, uint64 sz, int perm)
+kvmmap(pagetable_t pagetable,uint64 va, uint64 pa, uint64 sz, int perm)
 {
-  if(mappages(kernel_pagetable, va, sz, pa, perm) != 0)
+  if(mappages(pagetable, va, sz, pa, perm) != 0)
     panic("kvmmap");
 }
 
 // translate a kernel virtual address to
 // a physical address. only needed for
 // addresses on the stack.
-// assumes va is page aligned.
+// assumes va is- page aligned.
 uint64
-kvmpa(uint64 va)
+kvmpa(pagetable_t knernelpgtbl, uint64 va)
 {
   uint64 off = va % PGSIZE;
   pte_t *pte;
   uint64 pa;
   
-  pte = walk(kernel_pagetable, va, 0);
+  pte = walk(knernelpgtbl, va, 0);
   if(pte == 0)
     panic("kvmpa");
   if((*pte & PTE_V) == 0)
@@ -439,4 +494,19 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
   } else {
     return -1;
   }
+}
+
+void free_kernelpgtbl(pagetable_t kernelpgtbl){
+  for (uint64 i = 0; i < 512; i++)
+  {
+    pte_t pte = kernelpgtbl[i];
+    uint64 pa = PTE2PA(pte);
+    if ((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0)
+    {
+      free_kernelpgtbl((pagetable_t)pa);
+      kernelpgtbl[i] = 0;
+    }
+
+  }
+  kfree((void*)kernelpgtbl);    
 }

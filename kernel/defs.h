@@ -12,7 +12,11 @@ struct superblock;
 struct mbuf;
 struct sock;
 #endif
-
+// 我加的
+typedef unsigned long uint64;
+void vmprint(pagetable_t, int);
+pagetable_t kernelpgtblinit();
+void free_kernelpgtbl(pagetable_t);
 // bio.c
 void            binit(void);
 struct buf*     bread(uint, uint);
@@ -160,8 +164,8 @@ int             uartgetc(void);
 // vm.c
 void            kvminit(void);
 void            kvminithart(void);
-uint64          kvmpa(uint64);
-void            kvmmap(uint64, uint64, uint64, int);
+uint64          kvmpa(pagetable_t, uint64);
+void            kvmmap(pagetable_t, uint64, uint64, uint64, int);
 int             mappages(pagetable_t, uint64, uint64, uint64, int);
 pagetable_t     uvmcreate(void);
 void            uvminit(pagetable_t, uchar *, uint);

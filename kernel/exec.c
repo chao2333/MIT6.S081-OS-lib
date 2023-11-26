@@ -119,8 +119,9 @@ exec(char *path, char **argv)
   //实验 print a pagetable
    if (p->pid == 1)
   {
-    //printf("%p %p",p ->pagetable ,p->trapframe->kernel_satp);
-    vmprint(p -> pagetable);
+    printf("page table %p\n", p -> pagetable);
+    //printf("pa %p\n", PTE2PA((pte_t)(p -> pagetable)));
+    vmprint(p -> pagetable, 0); 
   }
 
   return argc; // this ends up in a0, the first argument to main(argc, argv)
