@@ -434,6 +434,8 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 int
 copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 {
+  return copyin_new(pagetable, dst, srcva, len);
+  /*
   uint64 n, va0, pa0;
 
   while(len > 0){
@@ -449,8 +451,9 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
     len -= n;
     dst += n;
     srcva = va0 + PGSIZE;
-  }
+  } 
   return 0;
+  */
 }
 
 // Copy a null-terminated string from user to kernel.
@@ -460,6 +463,8 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 int
 copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 {
+  return copyinstr_new(pagetable, dst,srcva, max);
+  /*
   uint64 n, va0, pa0;
   int got_null = 0;
 
@@ -494,6 +499,7 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
   } else {
     return -1;
   }
+  */
 }
 
 void free_kernelpgtbl(pagetable_t kernelpgtbl){

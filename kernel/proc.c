@@ -257,6 +257,11 @@ growproc(int n)
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
   p->sz = sz;
+  if (PGROUNDUP(sz) > PLIC) 
+  {
+    return -1;
+  }
+  
   return 0;
 }
 
@@ -295,6 +300,8 @@ fork(void)
     if(p->ofile[i])
       np->ofile[i] = filedup(p->ofile[i]);
   np->cwd = idup(p->cwd);
+  //从用户页表向进程的内核页表复制
+  u2kpgtblcopy(np->pagetable, np->kernelpgtbl, 0,np->sz);
 
   safestrcpy(np->name, p->name, sizeof(p->name));
 

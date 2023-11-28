@@ -74,7 +74,8 @@ exec(char *path, char **argv)
   uvmclear(pagetable, sz-2*PGSIZE);
   sp = sz;
   stackbase = sp - PGSIZE;
-
+  //复制用户页表到内核页表
+  u2kpgtblcopy(p->pagetable, p->kernelpgtbl, 0, sz);
   // Push argument strings, prepare rest of stack in ustack.
   for(argc = 0; argv[argc]; argc++) {
     if(argc >= MAXARG)

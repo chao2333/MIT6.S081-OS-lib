@@ -9,7 +9,33 @@
 // This file contains copyin_new() and copyinstr_new(), the
 // replacements for copyin and coyinstr in vm.c.
 //
-
+void u2kpgtblcopy1(pagetable_t upagetable, pagetable_t kpagetable, uint64 oldsz, uint64 newsz) {
+  oldsz = PGROUNDUP(oldsz);
+  for (uint64 i = oldsz; i < newsz; i += PGSIZE) {
+    pte_t* pte_from = walk(upagetable, i, 0);
+    pte_t* pte_to = walk(kpagetable, i, 1);
+    if(pte_from == 0) panic("u2kvmcopy: src pte do not exist");
+    if(pte_to == 0) panic("u2kvmcopy: dest pte walk fail");
+    uint64 pa = PTE2PA(*pte_from);
+    uint flag = (PTE_FLAGS(*pte_from)) & (~PTE_U);
+    *pte_to = PA2PTE(pa) | flag;
+  }
+}
+void u2kpgtblcopy(pagetable_t upgtbl, pagetable_t kpgtbl, uint64 start, uint64 end){
+  start = PGROUNDUP(start);
+  for (uint64 i = start; i < end; i+=PGSIZE)
+  {
+    pte_t *upte = walk(upgtbl, i, 0);
+    pte_t *kpte = walk(kpgtbl, i, 1);
+    if (upte == 0 || kpte == 0)
+    {
+      panic("panic:u2kpgtblcopy");
+    }
+    uint flag = (PTE_FLAGS(*upte)) & (~PTE_U);
+    *kpte = PTE2PA(*upte) | flag;
+  }
+  
+}
 static struct stats {
   int ncopyin;
   int ncopyinstr;
